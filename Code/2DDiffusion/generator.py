@@ -22,7 +22,7 @@ u0 = Tcool * np.ones((nx, ny))
 u = np.empty((nx, ny))
 
 # Initial conditions - ring of inner radius r, width dr centred at (cx,cy) (mm)
-r, cx, cy = 0.25, 5, 5
+r, cx, cy = 4, 5, 5
 r2 = r**2
 
 rx, ry = 2,4
@@ -45,11 +45,11 @@ def do_timestep(u0, u):
           (u0[2:, 1:-1] - 2*u0[1:-1, 1:-1] + u0[:-2, 1:-1])/dx2
           + (u0[1:-1, 2:] - 2*u0[1:-1, 1:-1] + u0[1:-1, :-2])/dy2 )
 
-    for i in range(nx):
-        for j in range(ny):
-            p2 = (i*dx-cx)**2 + (j*dy-cy)**2
-            if p2 < r2:
-                u[i,j] = Thot
+    #for i in range(nx):
+    #    for j in range(ny):
+    #        p2 = (i*dx-cx)**2 + (j*dy-cy)**2
+    #        if p2 < r2:
+    #            u[i,j] = Thot
 
     u0 = u.copy()
     return u0, u

@@ -18,10 +18,10 @@ from gauss_func import gauss_func
 
 import matplotlib.pyplot as plt
 from matplotlib import rc
-rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
+#rc('font',**{'family':'sans-serif','sans-serif':['Helvetica']})
 ## for Palatino and other serif fonts use:
 #rc('font',**{'family':'serif','serif':['Palatino']})
-rc('text', usetex=False)
+#rc('text', usetex=False)
 
 
 
@@ -32,8 +32,8 @@ def smooth(y, box_pts):
 
 
 
- 
-   
+
+
 
 ###########################################################################
 # Do not change these variables                                           #
@@ -51,6 +51,7 @@ NO_PLOT=4;
 CONSTANT_WIND=1;
 FLUCTUATING_WIND=2;
 PREVAILING_WIND=3;
+RANDOM_WIND=4;
 
 # number of stacks
 ONE_STACK=1;
@@ -71,7 +72,7 @@ SULPHURIC_ACID=2;
 ORGANIC_ACID=3;
 AMMONIUM_NITRATE=4;
 nu=[2., 2.5, 1., 2.];
-rho_s=[2160., 1840., 1500., 1725.];
+rho_s=[2160., 1840., 1500., 1725.]; #TODO:MODIFY THIS FOR METHANE PROPERTIES
 Ms=[58.44e-3, 98e-3, 200e-3, 80e-3];
 Mw=18e-3;
 
@@ -87,12 +88,12 @@ y=x;              # x-grid is same as y-grid
 # SECTION 1: Configuration
 # Variables can be changed by the user+++++++++++++++++++++++++++++++++++++
 RH=0.90;
-aerosol_type=SODIUM_CHLORIDE;
+aerosol_type=ORGANIC_ACID;
 
 dry_size=60e-9;
 humidify=DRY_AEROSOL;
 
-stab1=1; # set from 1-6
+stab1=2; # set from 1-6
 stability_used=CONSTANT_STABILITY;
 
 
@@ -100,10 +101,15 @@ output=PLAN_VIEW;
 x_slice=26; # position (1-50) to take the slice in the x-direction
 y_slice=1;  # position (1-50) to plot concentrations vs time
 
-wind=PREVAILING_WIND;
+wind=RANDOM_WIND;
 stacks=ONE_STACK;
-stack_x=[0., 1000., -200.];
-stack_y=[0., 250., -500.];
+
+#If you don't want random positions for the stack replace
+#random_x and random_y in stack_x and stack_y with 0.
+random_x = np.random.randint(-1000,1001)
+random_y = np.random.randint(-1000,1001)
+stack_x=[random_x, 1000., -200.];
+stack_y=[random_y, 250., -500.];
 
 Q=[40., 40., 40.]; # mass emitted per unit time
 H=[50., 50., 50.]; # stack height, m
@@ -118,7 +124,7 @@ Dz=10.;
 
 # Decide which stability profile to use
 if stability_used == CONSTANT_STABILITY:
-   
+
    stability=stab1*np.ones((days*24,1));
    stability_str=stability_str[stab1-1];
 elif stability_used == ANNUAL_CYCLE:
@@ -142,7 +148,7 @@ elif output == HEIGHT_SLICE:
    C1=np.zeros((len(y),len(z),days*24)); # array to store data, initialised to be zero
 
    [y,z]=np.meshgrid(y,z); # y and z defined at all positions on the grid
-   x=x[x_slice]*np.ones(np.shape(y));    # x is defined to be x at x_slice       
+   x=x[x_slice]*np.ones(np.shape(y));    # x is defined to be x at x_slice
 else:
    sys.exit()
 
@@ -163,6 +169,10 @@ elif wind == PREVAILING_WIND:
    wind_dir[np.where(wind_dir>=360.)]= \
         np.mod(wind_dir[np.where(wind_dir>=360)],360);
    wind_dir_str='Prevailing wind';
+elif wind == RANDOM_WIND: 
+    direction = 360*np.random.rand();
+    wind_dir = direction*np.ones((days*24,1));
+    wind_dir_str='Random wind direction'
 else:
    sys.exit()
 #--------------------------------------------------------------------------
@@ -190,15 +200,22 @@ if humidify == DRY_AEROSOL:
 elif humidify == HUMIDIFY:
    mass=np.pi/6.*rho_s[aerosol_type]*dry_size**3.;
    moles=mass/Ms[aerosol_type];
-        
+
    nw=RH*nu[aerosol_type]*moles/(1.-RH);
    mass2=nw*Mw+moles*Ms[aerosol_type];
-   C1=C1*mass2/mass; 
+   C1=C1*mass2/mass;
 else:
    sys.exit()
 
+NUM_SAMPLES = 10
 
-
+for i in range(NUM_SAMPLES):
+    for j in range(NUM_SAMPLES):
+        random_sample_x = np.random.randint(len(C1))
+        random_sample_y = np.random.randint(len(C1[0]))
+        total_concentration = sum(C1[random_sample_x,random_sample_y])
+        if(total_concentration != 0):
+            print([random_sample_x, random_sample_y, total_concentration])
 
 
 # output the plots
@@ -219,7 +236,7 @@ if output == PLAN_VIEW:
 
    print('Plot Shit')
    plt.show()
-   plt.ion()
+   #plt.ion()
    #plt.draw()
    plt.pause(25)
    print('Shit Be Plotted')
@@ -227,8 +244,8 @@ if output == PLAN_VIEW:
 elif output == HEIGHT_SLICE:
    plt.figure();
    plt.ion()
-   
-   plt.pcolor(y,z,np.mean(C1,axis=2)*1e6, cmap='jet')      
+
+   plt.pcolor(y,z,np.mean(C1,axis=2)*1e6, cmap='jet')
    plt.clim((0,1e2));
    plt.xlabel('y (metres)');
    plt.ylabel('z (metres)');
@@ -245,7 +262,7 @@ elif output == SURFACE_TIME:
       ax1.legend(('Hourly mean','Daily mean'))
    except:
       sys.exit()
-      
+
    ax1.set_xlabel('time (days)');
    ax1.set_ylabel('Mass loading ($\mu$ g m$^{-3}$)');
    ax1.set_title(stability_str +'\n' + wind_dir_str);
@@ -254,13 +271,10 @@ elif output == SURFACE_TIME:
    ax2.set_xlabel('time (days)');
    ax2.set_ylabel('Stability parameter');
    f.show()
-   
+
 elif output == NO_PLOT:
    print('don''t plot');
 else:
    sys.exit()
-   
-
-
 
 
