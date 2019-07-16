@@ -77,7 +77,7 @@ Ms=[58.44e-3, 98e-3, 200e-3, 80e-3];
 Mw=18e-3;
 
 
-dxy=100;          # resolution of the model in both x and y directions
+dxy=50; #50;          # resolution of the model in both x and y directions
 dz=10;
 x=np.mgrid[-2500:2500+dxy:dxy]; # solve on a 5 km domain
 y=x;              # x-grid is same as y-grid
@@ -93,7 +93,7 @@ aerosol_type=ORGANIC_ACID;
 dry_size=60e-9;
 humidify=DRY_AEROSOL;
 
-stab1=2; # set from 1-6
+stab1=1; # set from 1-6
 stability_used=CONSTANT_STABILITY;
 
 
@@ -207,39 +207,54 @@ elif humidify == HUMIDIFY:
 else:
    sys.exit()
 
-NUM_SAMPLES = 10
+NUM_SAMPLES = 20
 
 for i in range(NUM_SAMPLES):
-    for j in range(NUM_SAMPLES):
-        random_sample_x = np.random.randint(len(C1))
-        random_sample_y = np.random.randint(len(C1[0]))
-        total_concentration = sum(C1[random_sample_x,random_sample_y])
-        if(total_concentration != 0):
-            print([random_sample_x, random_sample_y, total_concentration])
+    random_sample_x = np.random.randint(len(C1))
+    random_sample_y = np.random.randint(len(C1[0]))
+    total_concentration = sum(C1[random_sample_x,random_sample_y])
+    if(total_concentration != 0):
+        print([random_sample_x*dxy-2500, random_sample_y*dxy-2500, total_concentration])
 
+print('Actual leak position and concentration.')
+print('Concentration found may be slightly off by resolution')
+
+for i in range(0,1):
+    for j in range(0,1):
+        print([random_x+dxy*i, random_y+dxy*j,sum(C1[(random_x+dxy*i+2500)/dxy,(random_y+dxy*j+2500)/dxy])])
+
+concentrations = []
+
+for i in range(len(C1)):
+    for j in range(len(C1)):
+        concentrations.append(sum(C1[i][j]))
+print('Max concentration:')
+max_concentration = max(concentrations)
+print(max_concentration)
+
+for i in range(len(C1)):
+    for j in range(len(C1)):
+        if(sum(C1[i][j]) == max_concentration):
+            print(str(i*dxy-2500) + ", " + str(j*dxy-2500))
 
 # output the plots
 if output == PLAN_VIEW:
-   print('Plotting PLAN_VIEW')
    plt.figure()
    plt.ion()
-   print('Pretty colours!!')
+
    plt.pcolor(x,y,np.mean(C1,axis=2)*1e6, cmap='jet');
    plt.clim((0, 1e2));
 
-   print('Labeling')
    plt.title(stability_str + '\n' + wind_dir_str);
    plt.xlabel('x (metres)');
    plt.ylabel('y (metres)');
    cb1=plt.colorbar();
    #cb1.set_label('$\mu$ g m$^{-3}$');
 
-   print('Plot Shit')
    plt.show()
    #plt.ion()
    #plt.draw()
    plt.pause(25)
-   print('Shit Be Plotted')
 
 elif output == HEIGHT_SLICE:
    plt.figure();
