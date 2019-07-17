@@ -293,7 +293,7 @@ def generate_data(xLoc, yLoc):
             for i in range(len(C1)):
                 newrow.append(sum(C1[i][j]))
             concentrations.append(newrow)
-        return [concentrations, direction, [(random_x+2500)/dxy,(random_y+2500)/dxy]]
+        return [concentrations, direction, [(xLoc+2500)/dxy,(yLoc+2500)/dxy]]
     else:
        sys.exit()
 
@@ -305,6 +305,7 @@ def write_data(n):
     f = open('data.txt','w+')
 
     for i in range(n):
+        print('Generation: ' + str(i) + '/' + str(n))
         #If you don't want random positions for the stack replace
         #random_x and random_y in stack_x and stack_y with 0.
         random_x = np.random.randint(-1000,1001)
@@ -318,7 +319,7 @@ def write_data(n):
 def read_data(fileName):
 
     #Read the file
-    f = open('data.txt','r+')
+    f = open(fileName,'r+')
     content = f.readlines()
     f.close()
 
