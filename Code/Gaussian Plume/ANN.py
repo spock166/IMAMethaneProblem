@@ -154,14 +154,7 @@ def let_ann_play(prob,sensor,wind,output):
     size_of_testing_data = num_data - size_of_training_data
 
     for i in range(size_of_training_data):
-        simple_network.train(input_data[i], normalized_output[i])
-
-    #print(input_data[0])
-    #print(output_data[0])
-    
-    #sample = simple_network.run(input_data[0])
-    #print(sample)
-    
+        simple_network.train(input_data[i], normalized_output[i])    
     
     print('Evaluate Ann...')
     #See what ANN learned.
@@ -170,6 +163,10 @@ def let_ann_play(prob,sensor,wind,output):
     print('Noise in wind measurement: %.2f %%'%(wind_noise*100))
     print('Noise in output data: %.2f %%'%(output_noise*100))
     print('Average number of sensors that are on: %d / %d'%(int((1-prob_no_sensor)*len(concentrations[0])**2), len(concentrations[0])**2))
+
+    max_error = -100
+    min_error = 100
+    
     for tol in np.arange(0,.5,0.05):
         num_correct = 0
         total_error = 0
@@ -177,6 +174,12 @@ def let_ann_play(prob,sensor,wind,output):
         for i in range(size_of_testing_data):
             xGuess, yGuess = simple_network.run(input_data[-i])
             error = ((xGuess - normalized_output[-i][0])**2+(yGuess-normalized_output[-i][1])**2)**0.5
+
+            if(error > max_error):
+                max_error = error
+
+            if(error < min_error):
+                min_error = error
             
             if(error[0] < tol):
                 num_correct = num_correct + 1
@@ -190,6 +193,8 @@ def let_ann_play(prob,sensor,wind,output):
         percent_correct = 100.0*num_correct/size_of_testing_data
         print('ANN got %.2f%% of guesses right within %.0f%% of the width of the sensored area'%(percent_correct,tol*100))
         print('ANN\'s average distance out of tolerance was %.2f units for guesses within %.2f%% of the width of the sensored area\n'%(average_error,tol*100))
+    print('Maximum error: %.2f'%(max_error))
+    print('Minimum error: %.2f'%(min_error))
 
     return simple_network,input_data,normalized_output
 
@@ -207,7 +212,7 @@ Example:
 The following two lines will create a neural network called nn and take 10 samples.
 
 nn,input_data,output_data = let_ann_play(.8,.15,.05,.05)
-samples = sample_points(nn,input_data,output_data)
+samples = sample_points(nn,input_data,output_data,10)
 """
 
 #for p in np.arange(0.0,0.95,0.05):
