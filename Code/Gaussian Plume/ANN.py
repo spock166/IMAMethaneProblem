@@ -74,13 +74,14 @@ class NeuralNetwork:
         output_vector = activation_function(output_vector)
     
         return output_vector
+    
 
 
 def let_ann_play(prob,sensor,wind,output):
-    prob_no_sensor = prob
-    sensor_noise = sensor
-    wind_noise = wind
-    output_noise = output
+    prob_no_sensor = prob #Probability that a sensor is turned off
+    sensor_noise = sensor #Noise amount for input data
+    wind_noise = wind #Noise amount for wind collection
+    output_noise = output #Noise for output
     
     #Read in the data
     print('Reading in data...')
@@ -128,8 +129,6 @@ def let_ann_play(prob,sensor,wind,output):
     print('Format other data for Ann to eat...')
 
     #Prepare take the normalized data and get it ready for ANN to look at.
-    #Would it be good to put sensor on/off commands here???
-    #Might be good to break into train/test for the sensor on/off stuff.
     for k in range(num_data):
         test_data = []
         for i in range(len(concentrations[k])):
@@ -192,14 +191,27 @@ def let_ann_play(prob,sensor,wind,output):
         print('ANN got %.2f%% of guesses right within %.0f%% of the width of the sensored area'%(percent_correct,tol*100))
         print('ANN\'s average distance out of tolerance was %.2f units for guesses within %.2f%% of the width of the sensored area\n'%(average_error,tol*100))
 
+    return simple_network,input_data,normalized_output
 
-#for i in range(10):
-#    let_ann_play()
+def sample_points(nn,input_data,output_data,num_samples):
+    sample_indices = random.sample(range(len(input_data)),num_samples)
+    sample = []
 
+    for i in sample_indices:
+        sample.append([nn.run(input_data[i]), output_data[i]])
 
+    return sample
+
+"""
+Example:
+The following two lines will create a neural network called nn and take 10 samples.
+
+nn,input_data,output_data = let_ann_play(.8,.15,.05,.05)
+samples = sample_points(nn,input_data,output_data)
+"""
 
 #for p in np.arange(0.0,0.95,0.05):
 #    let_ann_play(p,0.2,0.05,0.05)
 
-for n in np.arange(0.05,0.5,0.05):
-    let_ann_play(0.8,n,0.05,0.05)
+#for n in np.arange(0.05,0.5,0.05):
+#    let_ann_play(0.8,n,0.05,0.05)
