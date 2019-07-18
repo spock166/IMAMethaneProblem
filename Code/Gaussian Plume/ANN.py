@@ -4,6 +4,7 @@ import gaussian_plume_model as gp
 import numpy as np
 from scipy.stats import truncnorm
 from scipy.special import expit as activation_function
+import random
 
 
 #We'll use this function to generate the initial weights for our ANN
@@ -75,66 +76,130 @@ class NeuralNetwork:
         return output_vector
 
 
+def let_ann_play(prob,sensor,wind,output):
+    prob_no_sensor = prob
+    sensor_noise = sensor
+    wind_noise = wind
+    output_noise = output
+    
+    #Read in the data
+    print('Reading in data...')
+    concentrations, wind_dir, leak_loc = gp.read_data('data_XL.txt')
 
-#Read in the data
-concentrations, wind_dir, leak_loc = gp.read_data('data_medium.txt')
+    #Let's shuffle the data a bit
+    combined = list(zip(concentrations, wind_dir, leak_loc))
+    random.shuffle(combined)
+    concentrations, wind_dir, leak_loc = zip(*combined)
+    
+    num_data = len(concentrations)
+    #Option for adding a bias node.  Maybe move into NeuralNetwork class in the future
+    is_biased = True
+    if is_biased:
+        num_inputs = len(concentrations[0])**2 + 2
+    else:
+        num_inputs = len(concentrations[0])**2 + 1
 
-num_data = len(concentrations)
+    #Some options for our network
+    num_outputs = 2
+    learning_rate = 0.1
+
+    #Setup lists for input and output data.
+    input_data = []
+    output_data = []
+    normalized_output = []
+
+
+
+
+    print('Processing concentration data...')
+    #Go through and normalize concentrations between 0 and 1 then add some noise to simulate sensor inaccuracy.
+    for i in range(num_data):
+        c = concentrations[i]
+        maximum = max(max(c))
+        for j in range(len(c)):
+            for k in range(len(c)):
+                if random.random() < prob_no_sensor:
+                    concentrations[i][j][k] = 0
+                else:
+                    concentrations[i][j][k] = float(concentrations[i][j][k])/maximum+ np.random.normal(loc = 0.0, scale = sensor_noise) #Normalize concentrations
+                
 
     
-for i in range(num_data):
-    c = concentrations[i]
-    maximum = max(max(c))
-    #print(maximum)
-    for j in range(len(c)):
-        for k in range(len(c)):
-            concentrations[i][j][k] = float(concentrations[i][j][k])/maximum+ np.random.normal(loc = 0.0, scale = 0.05) #Normalize concentrations
+    print('Format other data for Ann to eat...')
 
-#print(num_data)
-num_inputs = len(concentrations[0])**2 + 1
-num_outputs = 2
-learning_rate = 0.1
+    #Prepare take the normalized data and get it ready for ANN to look at.
+    #Would it be good to put sensor on/off commands here???
+    #Might be good to break into train/test for the sensor on/off stuff.
+    for k in range(num_data):
+        test_data = []
+        for i in range(len(concentrations[k])):
+            for j in range(len(concentrations[k])):
+                test_data.append(concentrations[k][i][j])
 
-input_data = []
-output_data = []
-normalized_output = []
+        test_data.append(((wind_dir[k]/360.0)+ np.random.normal(loc = 0.0, scale = wind_noise))%1) #Normalize to make things [0,1]
+        if is_biased:
+            test_data.append(1)
+        input_data.append(test_data)
+        output_data.append(leak_loc[k])
 
-#Setup our ANN
-simple_network = NeuralNetwork(no_of_in_nodes = num_inputs, no_of_out_nodes = num_outputs, no_of_hidden_nodes = num_inputs, learning_rate = 0.1)
+    #Scale output between 0 and 1 and add some noise.
+    for i in range(len(output_data)):
+        normalized_output.append([(1.0/len(concentrations[0]) * output_data[i][0])+np.random.normal(loc = 0.0, scale = output_noise), (1.0/len(concentrations[0]) * output_data[i][1])+np.random.normal(loc = 0.0, scale = output_noise)])
+
+    #Setup our ANN
+    simple_network = NeuralNetwork(no_of_in_nodes = num_inputs, no_of_out_nodes = num_outputs, no_of_hidden_nodes = num_inputs, learning_rate = 0.1)
+
+    print('Train Ann, train...')
+    #Train ANN
+    size_of_training_data = int(num_data * 0.9)
+    size_of_testing_data = num_data - size_of_training_data
+
+    for i in range(size_of_training_data):
+        simple_network.train(input_data[i], normalized_output[i])
+
+    #print(input_data[0])
+    #print(output_data[0])
+    
+    #sample = simple_network.run(input_data[0])
+    #print(sample)
+    
+    
+    print('Evaluate Ann...')
+    #See what ANN learned.
+    print('Scenario Information:')
+    print('Noise in sensors: %.2f %%'%(sensor_noise*100))
+    print('Noise in wind measurement: %.2f %%'%(wind_noise*100))
+    print('Noise in output data: %.2f %%'%(output_noise*100))
+    print('Average number of sensors that are on: %d / %d'%(int((1-prob_no_sensor)*len(concentrations[0])**2), len(concentrations[0])**2))
+    for tol in np.arange(0,.5,0.05):
+        num_correct = 0
+        total_error = 0
+        missed = 0
+        for i in range(size_of_testing_data):
+            xGuess, yGuess = simple_network.run(input_data[-i])
+            error = ((xGuess - normalized_output[-i][0])**2+(yGuess-normalized_output[-i][1])**2)**0.5
+            
+            if(error[0] < tol):
+                num_correct = num_correct + 1
+            else:
+                total_error += error
+                missed += 1
+        if missed == 0:
+            average_error = 0
+        else:
+            average_error = total_error/missed
+        percent_correct = 100.0*num_correct/size_of_testing_data
+        print('ANN got %.2f%% of guesses right within %.0f%% of the width of the sensored area'%(percent_correct,tol*100))
+        print('ANN\'s average distance out of tolerance was %.2f units for guesses within %.2f%% of the width of the sensored area\n'%(average_error,tol*100))
 
 
-#Prepare data for ANN
-input_data = []
-output_data = []
+#for i in range(10):
+#    let_ann_play()
 
-for k in range(num_data):
-    test_data = []
-    for i in range(len(concentrations[k])):
-        for j in range(len(concentrations[k])):
-            test_data.append(concentrations[k][i][j])
 
-    test_data.append(((wind_dir[k]/360.0)+ np.random.normal(loc = 0.0, scale = 0.01))%1) #Normalize to make things [0,1]
-    input_data.append(test_data)
-    output_data.append(leak_loc[k])
 
-#Scale output
-for i in range(len(output_data)):
-    normalized_output.append([(1.0/len(concentrations[0]) * output_data[i][0])+np.random.normal(loc = 0.0, scale = 0.05), (1.0/len(concentrations[0]) * output_data[i][1])+np.random.normal(loc = 0.0, scale = 0.05)])
+#for p in np.arange(0.0,0.95,0.05):
+#    let_ann_play(p,0.2,0.05,0.05)
 
-#Train ANN
-size_of_training_data = int(num_data * 0.9)
-size_of_testing_data = num_data - size_of_training_data
-
-for i in range(size_of_training_data):
-    simple_network.train(input_data[i], normalized_output[i])
-
-#See what ANN learned.  Should add tolerance for correctness \varepsilon <= 0.05??
-num_correct = 0
-for i in range(size_of_testing_data):
-    xGuess, yGuess = simple_network.run(input_data[-i])
-    error = ((xGuess - normalized_output[-i][0])**2+(yGuess-normalized_output[-i][1])**2)**0.5
-    if(error[0] < 0.1):
-        num_correct = num_correct + 1
-
-percent_correct = 100.0*num_correct/size_of_testing_data
-print('ANN got ' + str(percent_correct) + '% of guesses right within 10% of the width of the sensored area')
+for n in np.arange(0.05,0.5,0.05):
+    let_ann_play(0.8,n,0.05,0.05)
