@@ -77,15 +77,15 @@ class NeuralNetwork:
     
 
 
-def let_ann_play(prob,sensor,wind,output):
+def let_ann_play(prob,sensor,wind,output, train_percent):
     prob_no_sensor = prob #Probability that a sensor is turned off
     sensor_noise = sensor #Noise amount for input data
-    wind_noise = wind #Noise amount for wind collection
+    wind_noise = wind #Noise amount for wind data collection
     output_noise = output #Noise for output
     
     #Read in the data
     print('Reading in data...')
-    concentrations, wind_dir, leak_loc = gp.read_data('data_XL.txt')
+    concentrations, wind_dir, leak_loc = gp.read_data('data_XL_new.txt')
 
     #Let's shuffle the data a bit
     combined = list(zip(concentrations, wind_dir, leak_loc))
@@ -122,6 +122,7 @@ def let_ann_play(prob,sensor,wind,output):
                 if random.random() < prob_no_sensor:
                     concentrations[i][j][k] = 0
                 else:
+                    #print('This sensor is on')
                     concentrations[i][j][k] = float(concentrations[i][j][k])/maximum+ np.random.normal(loc = 0.0, scale = sensor_noise) #Normalize concentrations
                 
 
@@ -150,7 +151,7 @@ def let_ann_play(prob,sensor,wind,output):
 
     print('Train Ann, train...')
     #Train ANN
-    size_of_training_data = int(num_data * 0.9)
+    size_of_training_data = int(num_data * train_percent)
     size_of_testing_data = num_data - size_of_training_data
 
     for i in range(size_of_training_data):
@@ -211,7 +212,7 @@ def sample_points(nn,input_data,output_data,num_samples):
 Example:
 The following two lines will create a neural network called nn and take 10 samples.
 
-nn,input_data,output_data = let_ann_play(.8,.15,.05,.05)
+nn,input_data,output_data = let_ann_play(.8,.15,.05,.05,0.9)
 samples = sample_points(nn,input_data,output_data,10)
 """
 

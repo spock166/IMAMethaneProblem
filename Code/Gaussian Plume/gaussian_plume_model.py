@@ -179,7 +179,8 @@ def generate_data(xLoc, yLoc):
     # SECTION 3: Main loop
     # For all times...
     C1=np.zeros((len(x),len(y),len(wind_dir)))
-    for i in tqdm.tqdm(range(0,len(wind_dir))):
+    #for i in tqdm.tqdm(range(0,len(wind_dir))):
+    for i in range(0,len(wind_dir)):
        for j in range(0,stacks):
             C=np.ones((len(x),len(y)))
             C=gauss_func(Q[j],wind_speed[i],wind_dir[i],x,y,z,
@@ -304,12 +305,12 @@ def generate_data(xLoc, yLoc):
 def write_data(n):
     f = open('data.txt','w+')
 
-    for i in range(n):
-        print('Generation: ' + str(i) + '/' + str(n))
+    for i in tqdm.tqdm(range(n)):
+        #print('Generation: ' + str(i) + '/' + str(n))
         #If you don't want random positions for the stack replace
         #random_x and random_y in stack_x and stack_y with 0.
-        random_x = np.random.randint(-1000,1001)
-        random_y = np.random.randint(-1000,1001)
+        random_x = np.random.randint(-2000,2001)
+        random_y = np.random.randint(-2000,2001)
         a,b,c = generate_data(random_x,random_y)
         #print(str(a))
         f.write(str(a) + ';' + str(b) + ';' + str(c)+ '\n')
