@@ -5,6 +5,8 @@ import numpy as np
 from scipy.stats import truncnorm
 from scipy.special import expit as activation_function
 import random
+import pylab as pl
+import matplotlib.pyplot as plt
 
 
 #We'll use this function to generate the initial weights for our ANN
@@ -167,6 +169,12 @@ def let_ann_play(prob,sensor,wind,output, train_percent):
 
     max_error = -100
     min_error = 100
+    min_index = 0
+    max_index = 0
+    WorstX = 0
+    BestX = 0
+    WorstY = 0
+    BestY = 0
     
     for tol in np.arange(0,.5,0.05):
         num_correct = 0
@@ -176,12 +184,19 @@ def let_ann_play(prob,sensor,wind,output, train_percent):
             xGuess, yGuess = simple_network.run(input_data[-i])
             error = ((xGuess - normalized_output[-i][0])**2+(yGuess-normalized_output[-i][1])**2)**0.5
 
-            if(error > max_error):
+            if(error > max_error and error < 0.4):
                 max_error = error
+                max_index = i
+                WorstX = xGuess
+                WorstY = yGuess
 
             if(error < min_error):
+                print(error)
                 min_error = error
-            
+                min_index = i
+                BestX = xGuess
+                BestY = yGuess
+                
             if(error[0] < tol):
                 num_correct = num_correct + 1
             else:
@@ -195,7 +210,35 @@ def let_ann_play(prob,sensor,wind,output, train_percent):
         print('ANN got %.2f%% of guesses right within %.0f%% of the width of the sensored area'%(percent_correct,tol*100))
         print('ANN\'s average distance out of tolerance was %.2f units for guesses within %.2f%% of the width of the sensored area\n'%(average_error,tol*100))
     print('Maximum error: %.2f'%(max_error))
+    print(normalized_output[-max_index])
+    print("(" + str(WorstX) + ", " + str(WorstY) + ")")
+    xCoords = []
+    yCoords = []
+    xCoords.append(normalized_output[-max_index][0]*5000)
+    xCoords.append(WorstX*5000)
+
+    yCoords.append(normalized_output[-max_index][1]*5000)
+    yCoords.append(WorstY*5000)
+    #plt.plot(xCoords,yCoords, 'ro')
+    plt.scatter(xCoords,yCoords, s = 25,c = ['red','blue'])
+    plt.axis([0,5000,0,5000])
+    plt.show()
+    
     print('Minimum error: %.2f'%(min_error))
+    print("(" + str(BestX) + ", " + str(BestY) + ")")
+    print(normalized_output[-min_index])
+    xCoords = []
+    yCoords = []
+    xCoords.append(normalized_output[-min_index][0]*5000)
+    xCoords.append(BestX*5000)
+
+    yCoords.append(normalized_output[-min_index][1]*5000)
+    yCoords.append(BestY*5000)
+    #plt.plot(xCoords,yCoords, 'ro')
+    plt.scatter(xCoords,yCoords, s = 25,c = ['red','blue'])
+    plt.axis([0,5000,0,5000])
+    plt.show()
+
 
     return simple_network,input_data,normalized_output
 
