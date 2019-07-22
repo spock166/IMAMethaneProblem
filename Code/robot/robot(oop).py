@@ -1,15 +1,12 @@
 #!/usr/bin/env python
 # coding: utf-8
-
-
-
 import numpy as np
 import matplotlib.pyplot as plt
 
 
-#read data from the Gaussian plume model, taken from kevin's part, assume data is stored in the file "data.txt" which stores in the same directory as this python file
-import ast
 
+#import data from reading
+import ast
 def read_data(fileName):
 
     #Read the file
@@ -32,21 +29,21 @@ def read_data(fileName):
     return entry_grid, entry_direction, entry_leak
 
 
-
 a,b,c = read_data('data.txt')
-grid_data = np.reshape(a[0], (101, 101))
 
-#get_ipython().run_line_magic('matplotlib', 'inline')
-plt.imshow(grid_data)
+grid_data = np.asanyarray(a[0])
+
+plt.imshow(grid_data);
 plt.colorbar()
 plt.show()
 
 
-grid_data = np.asanyarray(a[0])
-
 
 def readMax(matrix):
-    max_value = np.amax(matrix)
+    try:
+        max_value = np.amax(matrix)
+    except:
+        max_value = 0
     if max_value == 0:
         return 1,1,0
     else:
@@ -56,9 +53,9 @@ def readMax(matrix):
 class robot():
     '''
     Define a robot class
-    grid_size ---> The size of the grid on which we place our robot to search for the leak
+    grid_size --- The size of the grid on which we place our robot to search for the leak
     '''
-    grid_size = 101   #class variable which represent the size of the grid that the robot is searching on common for all robot objects created for this specific task
+    grid_size = 101   #class variable
     def __init__(self, xpos, ypos, reading=0, search_size=1):
         self.x = xpos
         self.y = ypos
@@ -66,25 +63,25 @@ class robot():
         self.search_size = search_size
         self.leak_loc_x = xpos
         self.leak_loc_y = ypos
-    def move_left(self):
+    def move_up(self):
         if self.x >= 1:
             self.x -= 1
         #else:
             #print("hit the left boundary")
 
-    def move_right(self):
+    def move_down(self):
         if self.x < robot.grid_size-1:
             self.x += 1
         #else:
             #print("hit the right boundary")
             
-    def move_down(self):
+    def move_right(self):
         if self.y < robot.grid_size-1:
             self.y += 1
         #else:
             #print("hit the lower boundary")
     
-    def move_up(self):
+    def move_left(self):
         if self.y >= 1:
             self.y -= 1
         #else:
@@ -145,64 +142,53 @@ def assemble_submatrix(matrix, cx, cy, window):
     submatrix = matrix[sub_x_low:sub_x_up, sub_y_low:sub_y_up]
     return submatrix
 
-
 def robot_search(matrix, robot):
-    """
-    This function implements the robot search algorithm, 
-    
-    matrix ----> the factory grid for which the robot performs the search.
-
-    robot ----> an robot object that we programmed to simulate the search algorithm.
-    
-    path ----> a list whose elements are tuples of the form (x,y) which 
-    stores the position the robot takes until it finds the leak(maximum) or until the loop ends.
-    
-    
-    """
+    '''
+    we pad the grid (matrix) with -1 around the boundary, and place the robot at (1,1) instead of (0,0) to start the search
+    as a result, the location of the robot (x,y) does not directly correspond to the indices of the gird, rather
+    if the robot position index is (i,j), then it actuall cooresponds to (i-1,j-1) on the grid.
+    '''
     path = []
     m = matrix.shape[0]
     n = matrix.shape[1]
     padded_matrix = np.pad(matrix, [(1, 1), (1, 1)], mode='constant',constant_values=-1)
-    print(m,n)
+    
 
     for j in range(n):
         #print("y coord", robot.y)
-        if j%2 == 0:
-            for i in range(m):
-                submatrix = assemble_submatrix(padded_matrix, cx=robot.x,cy=robot.y,window=robot.search_size)
-                moved = robot.search(submatrix)                
-                if not moved:
-                    robot.move_right()
-                path.append((robot.x, robot.y))
-
-        else:
-            for i in range(m):
-                submatrix = assemble_submatrix(padded_matrix, cx=robot.x,cy=robot.y,window=robot.search_size)
-                moved = robot.search(submatrix)                
-                if not moved:
-                    robot.move_left()
-                path.append((robot.x, robot.y))
-        robot.move_down()
+        for i in range(m):
+            submatrix = assemble_submatrix(padded_matrix, cx=robot.x,cy=robot.y,window=robot.search_size)
+            moved = robot.search(submatrix)                
+            if not moved:
+                if j%2 == 0:
+                    robot.move_down()
+                else:
+                    robot.move_up()
+            path.append((robot.x, robot.y))
+        robot.move_right()
         path.append((robot.x, robot.y))
-    return robot.reading, path
+        
+        
+    return robot.reading, robot.leak_loc_x, robot.leak_loc_y, path
 
-
-#robo=robot(1,1)
-
-
-#del robo
 robo = robot(1,1)
-max_reading, path_data = robot_search(grid_data,robo)
+max_reading, leak_location_x, leak_location_y, path_data = robot_search(grid_data,robo)
 
-#Make an animation to show the path that the robot has taken to search for the leak
-"""
+
+print( 'leak find at (%d, %d)' % (leak_location_x-1, leak_location_y-1) ) 
+
+np.argwhere(grid_data == grid_data.max())
+len(path_data)
+
+
 import matplotlib.animation as animation
-get_ipython().run_line_magic('matplotlib', 'notebook')
+#get_ipython().run_line_magic('matplotlib', 'notebook')
 #taken from https://stackoverflow.com/questions/41827109/funcanimation-with-a-matrix 
-M=np.zeros((101,101))
+
+#M=np.zeros((101,101))
+M = grid_data.copy()
 def update(i):
     x,y = path_data[i]
-    print(i)
     M[x-1,y-1] = 1000
     matrice.set_array(M)
 
@@ -210,9 +196,11 @@ fig, ax = plt.subplots()
 matrice = ax.matshow(M)
 plt.colorbar(matrice)
 
-ani = animation.FuncAnimation(fig, update, frames=1000, interval=500)
+ani = animation.FuncAnimation(fig, update, frames=125, interval=50)
+#ani.save('path.mp4', writer=writer)
+ani.save('animation_overlay.gif', writer='imagemagick', fps=20)
+
 plt.show()
-"""
 
 
 
